@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sprite Test</title>
+  <style>
+    body {
+      background: #222;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+    .sprite-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 100px);
+      gap: 20px;
+    }
+    .sprite-item {
+      text-align: center;
+    }
+    .sprite-item img {
+      width: 72px;
+      height: 100px;
+      image-rendering: pixelated;
+      background: rgba(255,255,255,0.1);
+      border: 2px solid #444;
+    }
+    .sprite-item p {
+      font-size: 10px;
+      margin-top: 5px;
+    }
+    h2 {
+      margin: 20px 0 10px;
+      color: #ff6b6b;
+    }
+  </style>
+</head>
+<body>
+  <h1>Bomberman Sprite Test</h1>
+  
+  <h2>Blue Player</h2>
+  <div class="sprite-grid">
+    <div class="sprite-item"><img src="sprites/blue_idle.png"><p>idle</p></div>
+    <div class="sprite-item"><img src="sprites/blue_front_walk.png"><p>front_walk</p></div>
+    <div class="sprite-item"><img src="sprites/blue_back_walk.png"><p>back_walk</p></div>
+    <div class="sprite-item"><img src="sprites/blue_left_side_walk.png"><p>left_walk</p></div>
+    <div class="sprite-item"><img src="sprites/blue_right_side_walk.png"><p>right_walk</p></div>
+    <div class="sprite-item"><img src="sprites/blue_boom.png"><p>boom</p></div>
+  </div>
+
+  <h2>Pink Player</h2>
+  <div class="sprite-grid">
+    <div class="sprite-item"><img src="sprites/pink_idle.png"><p>idle</p></div>
+    <div class="sprite-item"><img src="sprites/pink_front_walk.png"><p>front_walk</p></div>
+    <div class="sprite-item"><img src="sprites/pink_back_walk.png"><p>back_walk</p></div>
+    <div class="sprite-item"><img src="sprites/pink_left_side_walk.png"><p>left_walk</p></div>
+    <div class="sprite-item"><img src="sprites/pink_right_side_walk.png"><p>right_walk</p></div>
+    <div class="sprite-item"><img src="sprites/pink_boom.png"><p>boom</p></div>
+  </div>
+
+  <h2>Black Player</h2>
+  <div class="sprite-grid">
+    <div class="sprite-item"><img src="sprites/black_idle.png"><p>idle</p></div>
+    <div class="sprite-item"><img src="sprites/black_front_walk.png"><p>front_walk</p></div>
+    <div class="sprite-item"><img src="sprites/black_back_walk.png"><p>back_walk</p></div>
+    <div class="sprite-item"><img src="sprites/black_left_side_walk.png"><p>left_walk</p></div>
+    <div class="sprite-item"><img src="sprites/black_right_side_walk.png"><p>right_walk</p></div>
+    <div class="sprite-item"><img src="sprites/black_boom.png"><p>boom</p></div>
+  </div>
+
+  <h2>White Player</h2>
+  <div class="sprite-grid">
+    <div class="sprite-item"><img src="sprites/idle.png"><p>idle</p></div>
+    <div class="sprite-item"><img src="sprites/front_walk.png"><p>front_walk</p></div>
+    <div class="sprite-item"><img src="sprites/back_walk.png"><p>back_walk</p></div>
+    <div class="sprite-item"><img src="sprites/left_side_walk.png"><p>left_walk</p></div>
+    <div class="sprite-item"><img src="sprites/right_side_walk.png"><p>right_walk</p></div>
+    <div class="sprite-item"><img src="sprites/boom.png"><p>boom</p></div>
+  </div>
+
+  <h2>Game Items</h2>
+  <div class="sprite-grid">
+    <div class="sprite-item"><img src="sprites/bomb.png"><p>bomb</p></div>
+    <div class="sprite-item"><img src="sprites/bomb_better.png"><p>bomb_better</p></div>
+    <div class="sprite-item"><img src="sprites/tile.png"><p>tile</p></div>
+    <div class="sprite-item"><img src="sprites/brick.png"><p>brick (wall)</p></div>
+    <div class="sprite-item"><img src="sprites/smashable_brick.png"><p>smashable</p></div>
+    <div class="sprite-item"><img src="sprites/heart.png"><p>heart</p></div>
+  </div>
+
+  <h2>Mob</h2>
+  <div class="sprite-grid">
+    <div class="sprite-item"><img src="sprites/bear_mob.png"><p>bear_mob</p></div>
+  </div>
+</body>
+</html>
