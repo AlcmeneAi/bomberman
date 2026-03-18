@@ -61,10 +61,10 @@ class GameRoom {
     // Set starting position based on player index
     const index = this.players.size;
     const positions = [
-      { x: 0, y: 0 },      // Top-left
-      { x: 12, y: 0 },     // Top-right
-      { x: 0, y: 12 },     // Bottom-left
-      { x: 12, y: 12 }     // Bottom-right
+      { x: 0,  y: 0,  direction: 'idle', facing: 'right' },  // Top-left     → faces right
+      { x: 12, y: 0,  direction: 'idle', facing: 'left'  },  // Top-right    → faces left
+      { x: 0,  y: 12, direction: 'idle', facing: 'right' },  // Bottom-left  → faces right
+      { x: 12, y: 12, direction: 'idle', facing: 'left'  },  // Bottom-right → faces left
     ];
 
     if (index < positions.length) {
@@ -84,7 +84,8 @@ class GameRoom {
       flameRange: player.flameRange,
       speed: player.speed,
       isAlive: player.isAlive,
-      direction: 'down'
+      direction: 'idle',
+      facing: index < positions.length ? positions[index].facing : 'right'
     });
 
     return playerId;
@@ -313,6 +314,7 @@ function handlePlayerMove(ws, data) {
     player.x = x;
     player.y = y;
     if (direction) player.direction = direction;
+    if (direction === 'left' || direction === 'right') player.facing = direction;
 
     // Update game state
     const playerState = room.gameState.players.find(p => p.id === playerId);
@@ -320,6 +322,7 @@ function handlePlayerMove(ws, data) {
       playerState.x = x;
       playerState.y = y;
       if (direction) playerState.direction = direction;
+      if (direction === 'left' || direction === 'right') playerState.facing = direction;
     }
 
     // Broadcast to all players

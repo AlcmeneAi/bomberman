@@ -123,13 +123,11 @@ export function GameScreen(gameState, currentPlayer, chatMessages, onMove, onPla
         class: `player player-${idx} ${directionClass}`,
         style: `
           position: absolute;
-          top: ${player.y * 40 + 2}px;
+          top: ${player.y * 40 - 10}px;
           left: ${player.x * 40 + 2}px;
-          width: 36px;
-          height: 36px;
         `,
         title: `${player.name} - Lives: ${player.lives}`
-      }, [player.name.charAt(0).toUpperCase()]);
+      }, []);
     }).filter(Boolean);
   };
 
