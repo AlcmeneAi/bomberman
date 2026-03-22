@@ -85,15 +85,33 @@ body {
   align-items: center;
   justify-content: center;
   height: 100vh;
+  gap: 30px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .waiting-container {
+  margin-top: 20px;
   background: rgba(0, 0, 0, 0.8);
   padding: 40px;
   border-radius: 10px;
   text-align: center;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.waiting-room > .chat-section {
+  background: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  width: 600px;
+  margin-bottom: 100px;
+  display: flex;
+  flex-direction: column;
+}
+
+.waiting-room > .chat-section .chat-messages {
+  flex: 1;
+  min-height: 0;
 }
 
 .waiting-container h1 {
