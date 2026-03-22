@@ -413,6 +413,60 @@ class BombermanGame {
               ),
               self.app.createElement("div", { class: "timer" }, [timerText]),
             ]),
+            self.app.createElement("div", { class: "chat-section" }, [
+              self.app.createElement("div", { class: "chat-title" }, [
+                "💬 CHAT",
+              ]),
+              self.app.createElement(
+                "div",
+                { class: "chat-messages" },
+                self.chatMessages.map((msg) =>
+                  self.app.createElement("div", { class: "chat-message" }, [
+                    self.app.createElement(
+                      "span",
+                      { class: "chat-message-author" },
+                      [msg.author + ": "],
+                    ),
+                    self.app.createElement(
+                      "span",
+                      { class: "chat-message-text" },
+                      [msg.text],
+                    ),
+                  ]),
+                ),
+              ),
+              self.app.createElement("div", { class: "chat-input-container" }, [
+                self.app.createElement(
+                  "input",
+                  {
+                    class: "chat-input",
+                    placeholder: "Type message...",
+                    maxlength: "100",
+                    onKeyPress: (e) => {
+                      if (e.key === "Enter" && e.target.value.trim()) {
+                        self.handleSendChat(e.target.value.trim());
+                        e.target.value = "";
+                      }
+                    },
+                  },
+                  [],
+                ),
+                self.app.createElement(
+                  "button",
+                  {
+                    class: "chat-send",
+                    onClick: () => {
+                      const input = document.querySelector(".chat-input");
+                      if (input && input.value.trim()) {
+                        self.handleSendChat(input.value.trim());
+                        input.value = "";
+                      }
+                    },
+                  },
+                  ["Send"],
+                ),
+              ]),
+            ]),
           ]);
 
         case "game":
@@ -528,6 +582,43 @@ class BombermanGame {
                       ),
                     ]),
                   ),
+                ),
+                self.app.createElement(
+                  "div",
+                  { class: "chat-input-container" },
+                  [
+                    self.app.createElement(
+                      "input",
+                      {
+                        class: "chat-input",
+                        placeholder: "Type message...",
+                        maxlength: "100",
+                        onKeyPress: (e) => {
+                          if (e.key === "Enter" && e.target.value.trim()) {
+                            self.handleSendChat(e.target.value.trim());
+                            e.target.value = "";
+                          }
+                        },
+                      },
+                      [],
+                    ),
+                    self.app.createElement(
+                      "button",
+                      {
+                        class: "chat-send",
+                        onClick: () => {
+                          const input = document.querySelector(
+                            ".sidebar .chat-input",
+                          );
+                          if (input && input.value.trim()) {
+                            self.handleSendChat(input.value.trim());
+                            input.value = "";
+                          }
+                        },
+                      },
+                      ["Send"],
+                    ),
+                  ],
                 ),
               ]),
             ]),

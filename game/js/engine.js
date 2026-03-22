@@ -27,6 +27,9 @@ export class GameEngine {
 
   setupKeyboardListeners() {
     document.addEventListener("keydown", (e) => {
+      // Ignore keys when typing in an input field
+      if (e.target.tagName === "INPUT") return;
+
       this.keysPressed[e.key.toLowerCase()] = true;
 
       // Handle bomb placement
@@ -37,6 +40,7 @@ export class GameEngine {
     });
 
     document.addEventListener("keyup", (e) => {
+      if (e.target.tagName === "INPUT") return;
       this.keysPressed[e.key.toLowerCase()] = false;
     });
   }
