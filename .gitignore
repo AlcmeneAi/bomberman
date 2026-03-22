@@ -12,3 +12,5 @@ Thumbs.db
 
 # Aseprite backup files
 *.aseprite-bak
+
+start.bat
