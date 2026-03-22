@@ -173,6 +173,8 @@ class BombermanGame {
           player.maxBombs = playerData.maxBombs;
           player.flameRange = playerData.flameRange;
           player.speed = playerData.speed;
+          player.direction = playerData.direction || "idle";
+          player.facing = playerData.facing || player.facing;
         }
       });
     }
@@ -371,32 +373,77 @@ class BombermanGame {
           const tiles = gameData.map?.tiles || [];
           const players = gameData.players || [];
           const bombs = gameData.bombs || [];
+          const explosions = gameData.explosions || [];
+          const powerups = gameData.powerups || [];
+
+          // Build lookup sets for bombs, explosions, powerups by position
+          const bombAt = {};
+          bombs.forEach((b) => {
+            bombAt[`${b.x},${b.y}`] = b;
+          });
+          const explosionAt = {};
+          explosions.forEach((e) => {
+            (e.cells || [[e.x, e.y]]).forEach(([cx, cy]) => {
+              explosionAt[`${cx},${cy}`] = e;
+            });
+          });
+          const powerupAt = {};
+          powerups.forEach((p) => {
+            powerupAt[`${p.x},${p.y}`] = p;
+          });
 
           return self.app.createElement("div", { class: "game-screen" }, [
             self.app.createElement("div", { class: "game-container" }, [
               self.app.createElement("div", { class: "game-board" }, [
-                ...tiles.map((tile) =>
-                  self.app.createElement(
+                ...tiles.map((tile) => {
+                  const key = `${tile.x},${tile.y}`;
+                  const tileChildren = [];
+                  if (bombAt[key]) {
+                    tileChildren.push(
+                      self.app.createElement("div", { class: "bomb" }, []),
+                    );
+                  }
+                  if (explosionAt[key]) {
+                    tileChildren.push(
+                      self.app.createElement("div", { class: "explosion" }, []),
+                    );
+                  }
+                  if (powerupAt[key]) {
+                    tileChildren.push(
+                      self.app.createElement(
+                        "div",
+                        { class: `powerup ${powerupAt[key].type}` },
+                        [],
+                      ),
+                    );
+                  }
+                  return self.app.createElement(
                     "div",
                     {
                       class: `tile ${tile.type}`,
                       style: `grid-column: ${tile.x + 1}; grid-row: ${tile.y + 1};`,
                     },
+                    tileChildren,
+                  );
+                }),
+                ...players.map((player, idx) => {
+                  let dirClass = "";
+                  if (!player.isAlive) {
+                    dirClass = "dead";
+                  } else if (player.direction && player.direction !== "idle") {
+                    dirClass = `walking-${player.direction}`;
+                  } else if (player.facing) {
+                    dirClass = `facing-${player.facing}`;
+                  }
+                  return self.app.createElement(
+                    "div",
+                    {
+                      class: `player player-${idx} ${dirClass}`.trim(),
+                      style: `position: absolute; top: ${player.y * 40 - 10}px; left: ${player.x * 40 + 2}px;`,
+                    },
                     [],
-                  ),
-                ),
-                ...players
-                  .filter((p) => p.isAlive)
-                  .map((player, idx) =>
-                    self.app.createElement(
-                      "div",
-                      {
-                        class: `player player-${idx}`,
-                        style: `position: absolute; top: ${player.y * 40 + 2}px; left: ${player.x * 40 + 2}px;`,
-                      },
-                      [player.name.charAt(0).toUpperCase()],
-                    ),
-                  ),
+                  );
+                }),
               ]),
             ]),
             self.app.createElement("div", { class: "sidebar" }, [

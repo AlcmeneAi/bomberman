@@ -229,6 +229,9 @@ export class GameEngine {
     }
 
     player.direction = direction;
+    if (direction === "left" || direction === "right") {
+      player.facing = direction;
+    }
 
     if (moved && this.isPositionValid(newX, newY)) {
       player.x = newX;

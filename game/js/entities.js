@@ -15,6 +15,7 @@ export class Player {
     this.flameRange = 1;
     this.speed = 1;
     this.direction = "idle"; // idle, up, down, left, right
+    this.facing = "right"; // left or right (last horizontal direction)
     this.isAlive = true;
   }
 
@@ -74,6 +75,7 @@ export class Player {
       flameRange: this.flameRange,
       speed: this.speed,
       direction: this.direction,
+      facing: this.facing,
       isAlive: this.isAlive,
     };
   }
