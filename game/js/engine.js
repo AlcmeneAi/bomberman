@@ -76,7 +76,7 @@ export class GameEngine {
     const player = Array.from(this.gameState.players.values()).find(
       (p) => p.id === this.gameClient.playerId,
     );
-    if (!player) return;
+    if (!player || !player.isAlive) return;
 
     const movementDelay = this.baseMovementDelay / (player.speed || 1);
     if (currentTime - this.lastMoveTime < movementDelay) {
@@ -146,7 +146,7 @@ export class GameEngine {
     const player = Array.from(this.gameState.players.values()).find(
       (p) => p.id === this.gameClient.playerId,
     );
-    if (!player) return;
+    if (!player || !player.isAlive) return;
 
     // Check powerup collision
     for (const powerup of this.gameState.getAllPowerUps()) {

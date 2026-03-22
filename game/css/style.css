@@ -5,7 +5,7 @@
 }
 
 body {
-  font-family: 'Arial', sans-serif;
+  font-family: "Arial", sans-serif;
   background-color: #222;
   color: #fff;
   overflow: hidden;
@@ -160,7 +160,7 @@ body {
   position: relative;
   width: 40px;
   height: 40px;
-  background-image: url('../sprites/tile.png');
+  background-image: url("../sprites/tile.png");
   background-size: cover;
   background-repeat: no-repeat;
   image-rendering: pixelated;
@@ -169,12 +169,12 @@ body {
 }
 
 .tile.empty {
-  background-image: url('../sprites/tile.png');
+  background-image: url("../sprites/tile.png");
   background-color: #444;
 }
 
 .tile.wall {
-  background-image: url('../sprites/brick.png');
+  background-image: url("../sprites/brick.png");
   background-color: #2a2a2a;
 }
 
@@ -183,7 +183,7 @@ body {
 }
 
 .tile.block {
-  background-image: url('../sprites/smashable_brick.png');
+  background-image: url("../sprites/smashable_brick.png");
   background-color: #8b4513;
 }
 
@@ -200,20 +200,36 @@ body {
 ────────────────────────────────────────────────────────────────────────── */
 
 @keyframes sprite-idle {
-  from { background-position-x: 0; }
-  to   { background-position-x: -108px; }
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: -108px;
+  }
 }
 @keyframes sprite-walk4 {
-  from { background-position-x: 0; }
-  to   { background-position-x: -144px; }
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: -144px;
+  }
 }
 @keyframes sprite-walk2 {
-  from { background-position-x: 0; }
-  to   { background-position-x: -72px; }
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: -72px;
+  }
 }
 @keyframes sprite-boom {
-  from { background-position-x: 0; }
-  to   { background-position-x: -216px; }
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: -216px;
+  }
 }
 
 .player {
@@ -230,10 +246,18 @@ body {
 }
 
 /* ── Idle (default, front-facing — fallback only) ── */
-.player.player-0 { background-image: url('../sprites/blue_idle.png'); }
-.player.player-1 { background-image: url('../sprites/pink_idle.png'); }
-.player.player-2 { background-image: url('../sprites/black_idle.png'); }
-.player.player-3 { background-image: url('../sprites/white_idle.png'); }
+.player.player-0 {
+  background-image: url("../sprites/blue_idle.png");
+}
+.player.player-1 {
+  background-image: url("../sprites/pink_idle.png");
+}
+.player.player-2 {
+  background-image: url("../sprites/black_idle.png");
+}
+.player.player-3 {
+  background-image: url("../sprites/white_idle.png");
+}
 
 /* ── Idle facing left (standing still, shows first frame of left-side-walk) ── */
 .player.facing-left {
@@ -241,10 +265,18 @@ body {
   animation: none;
   background-position: 0 0;
 }
-.player.player-0.facing-left { background-image: url('../sprites/blue_left_side_walk.png'); }
-.player.player-1.facing-left { background-image: url('../sprites/pink_left_side_walk.png'); }
-.player.player-2.facing-left { background-image: url('../sprites/black_left_side_walk.png'); }
-.player.player-3.facing-left { background-image: url('../sprites/white_left_side_walk.png'); }
+.player.player-0.facing-left {
+  background-image: url("../sprites/blue_left_side_walk.png");
+}
+.player.player-1.facing-left {
+  background-image: url("../sprites/pink_left_side_walk.png");
+}
+.player.player-2.facing-left {
+  background-image: url("../sprites/black_left_side_walk.png");
+}
+.player.player-3.facing-left {
+  background-image: url("../sprites/white_left_side_walk.png");
+}
 
 /* ── Idle facing right (standing still, shows first frame of right-side-walk) ── */
 .player.facing-right {
@@ -252,66 +284,115 @@ body {
   animation: none;
   background-position: 0 0;
 }
-.player.player-0.facing-right { background-image: url('../sprites/blue_right_side_walk.png'); }
-.player.player-1.facing-right { background-image: url('../sprites/pink_right_side_walk.png'); }
-.player.player-2.facing-right { background-image: url('../sprites/black_right_side_walk.png'); }
-.player.player-3.facing-right { background-image: url('../sprites/white_right_side_walk.png'); }
+.player.player-0.facing-right {
+  background-image: url("../sprites/blue_right_side_walk.png");
+}
+.player.player-1.facing-right {
+  background-image: url("../sprites/pink_right_side_walk.png");
+}
+.player.player-2.facing-right {
+  background-image: url("../sprites/black_right_side_walk.png");
+}
+.player.player-3.facing-right {
+  background-image: url("../sprites/white_right_side_walk.png");
+}
 
 /* ── Walking up (back_walk, 4 frames) ── */
 .player.walking-up {
   background-size: 144px 50px;
   animation: sprite-walk4 0.4s steps(4) infinite;
 }
-.player.player-0.walking-up { background-image: url('../sprites/blue_back_walk.png'); }
-.player.player-1.walking-up { background-image: url('../sprites/pink_back_walk.png'); }
-.player.player-2.walking-up { background-image: url('../sprites/black_back_walk.png'); }
-.player.player-3.walking-up { background-image: url('../sprites/white_back_walk.png'); }
+.player.player-0.walking-up {
+  background-image: url("../sprites/blue_back_walk.png");
+}
+.player.player-1.walking-up {
+  background-image: url("../sprites/pink_back_walk.png");
+}
+.player.player-2.walking-up {
+  background-image: url("../sprites/black_back_walk.png");
+}
+.player.player-3.walking-up {
+  background-image: url("../sprites/white_back_walk.png");
+}
 
 /* ── Walking down (front_walk, 4 frames) ── */
 .player.walking-down {
   background-size: 144px 50px;
   animation: sprite-walk4 0.4s steps(4) infinite;
 }
-.player.player-0.walking-down { background-image: url('../sprites/blue_front_walk.png'); }
-.player.player-1.walking-down { background-image: url('../sprites/pink_front_walk.png'); }
-.player.player-2.walking-down { background-image: url('../sprites/black_front_walk.png'); }
-.player.player-3.walking-down { background-image: url('../sprites/white_front_walk.png'); }
+.player.player-0.walking-down {
+  background-image: url("../sprites/blue_front_walk.png");
+}
+.player.player-1.walking-down {
+  background-image: url("../sprites/pink_front_walk.png");
+}
+.player.player-2.walking-down {
+  background-image: url("../sprites/black_front_walk.png");
+}
+.player.player-3.walking-down {
+  background-image: url("../sprites/white_front_walk.png");
+}
 
 /* ── Walking left (2 frames) ── */
 .player.walking-left {
   background-size: 72px 50px;
   animation: sprite-walk2 0.25s steps(2) infinite;
 }
-.player.player-0.walking-left { background-image: url('../sprites/blue_left_side_walk.png'); }
-.player.player-1.walking-left { background-image: url('../sprites/pink_left_side_walk.png'); }
-.player.player-2.walking-left { background-image: url('../sprites/black_left_side_walk.png'); }
-.player.player-3.walking-left { background-image: url('../sprites/white_left_side_walk.png'); }
+.player.player-0.walking-left {
+  background-image: url("../sprites/blue_left_side_walk.png");
+}
+.player.player-1.walking-left {
+  background-image: url("../sprites/pink_left_side_walk.png");
+}
+.player.player-2.walking-left {
+  background-image: url("../sprites/black_left_side_walk.png");
+}
+.player.player-3.walking-left {
+  background-image: url("../sprites/white_left_side_walk.png");
+}
 
 /* ── Walking right (2 frames) ── */
 .player.walking-right {
   background-size: 72px 50px;
   animation: sprite-walk2 0.25s steps(2) infinite;
 }
-.player.player-0.walking-right { background-image: url('../sprites/blue_right_side_walk.png'); }
-.player.player-1.walking-right { background-image: url('../sprites/pink_right_side_walk.png'); }
-.player.player-2.walking-right { background-image: url('../sprites/black_right_side_walk.png'); }
-.player.player-3.walking-right { background-image: url('../sprites/white_right_side_walk.png'); }
+.player.player-0.walking-right {
+  background-image: url("../sprites/blue_right_side_walk.png");
+}
+.player.player-1.walking-right {
+  background-image: url("../sprites/pink_right_side_walk.png");
+}
+.player.player-2.walking-right {
+  background-image: url("../sprites/black_right_side_walk.png");
+}
+.player.player-3.walking-right {
+  background-image: url("../sprites/white_right_side_walk.png");
+}
 
 /* ── Death / boom (6 frames, play once) ── */
 .player.dead {
   background-size: 216px 50px;
   animation: sprite-boom 0.6s steps(6) forwards;
+  will-change: background-position;
 }
-.player.player-0.dead { background-image: url('../sprites/blue_boom.png'); }
-.player.player-1.dead { background-image: url('../sprites/pink_boom.png'); }
-.player.player-2.dead { background-image: url('../sprites/black_boom.png'); }
-.player.player-3.dead { background-image: url('../sprites/white_boom.png'); }
+.player.player-0.dead {
+  background-image: url("../sprites/blue_boom.png");
+}
+.player.player-1.dead {
+  background-image: url("../sprites/pink_boom.png");
+}
+.player.player-2.dead {
+  background-image: url("../sprites/black_boom.png");
+}
+.player.player-3.dead {
+  background-image: url("../sprites/white_boom.png");
+}
 
 .bomb {
   position: absolute;
   width: 32px;
   height: 32px;
-  background-image: url('../sprites/bomb_better.png');
+  background-image: url("../sprites/bomb_better.png");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -321,6 +402,7 @@ body {
   left: 4px;
   z-index: 5;
   animation: bomb-pulse 0.3s infinite alternate;
+  will-change: transform;
 }
 
 @keyframes bomb-pulse {
@@ -339,6 +421,7 @@ body {
   background: radial-gradient(circle, #ff6b00 0%, #ff0000 50%, #ffff00 100%);
   z-index: 8;
   animation: explosion-fade 0.5s forwards;
+  will-change: transform, opacity;
 }
 
 @keyframes explosion-fade {
@@ -364,10 +447,12 @@ body {
   justify-content: center;
   font-size: 18px;
   animation: float 2s infinite ease-in-out;
+  will-change: transform;
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -376,15 +461,15 @@ body {
 }
 
 .powerup.bombs::before {
-  content: '💣';
+  content: "💣";
 }
 
 .powerup.flames::before {
-  content: '🔥';
+  content: "🔥";
 }
 
 .powerup.speed::before {
-  content: '⚡';
+  content: "⚡";
 }
 
 /* Sidebar */

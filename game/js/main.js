@@ -33,6 +33,9 @@ class BombermanGame {
     this.chatMessages = [];
     this.gameStartTime = 0;
 
+    // Dirty flag for render gating
+    this.needsRender = true;
+
     // Performance monitoring
     this.lastFrameTime = Date.now();
     this.deltaTime = 0;
@@ -54,7 +57,7 @@ class BombermanGame {
       console.log("Players update:", data);
       this.playerList = data.players;
       this.playerCount = data.playerCount;
-      this.app.render();
+      this.markDirty();
     });
 
     this.client.on("gameStarted", (data) => {
@@ -81,7 +84,7 @@ class BombermanGame {
       if (this.chatMessages.length > 20) {
         this.chatMessages.shift();
       }
-      this.app.render();
+      this.markDirty();
     });
 
     this.client.on("blocksDestroyed", (data) => {
@@ -89,7 +92,7 @@ class BombermanGame {
       data.blocks.forEach((block) => {
         this.gameState.map.destroyBlock(block.x, block.y);
       });
-      this.app.render();
+      this.markDirty();
     });
 
     this.client.on("explosion", (data) => {
@@ -112,20 +115,20 @@ class BombermanGame {
           };
         },
       });
-      this.app.render();
+      this.markDirty();
     });
 
     this.client.on("lobbyTimerUpdate", (data) => {
       this.lobbyPhase = data.phase;
       this.lobbyRemainingSeconds = data.remainingSeconds;
       this.playerCount = data.playerCount;
-      this.app.render();
+      this.markDirty();
     });
 
     this.client.on("countdownStarted", (data) => {
       this.lobbyPhase = "countdown";
       this.lobbyRemainingSeconds = data.countdownSeconds;
-      this.app.render();
+      this.markDirty();
     });
 
     this.client.on("disconnected", () => {
@@ -152,7 +155,7 @@ class BombermanGame {
     this.client.playerId = data.playerId;
     this.playerList = data.players || [this.playerName];
     this.playerCount = this.playerList.length;
-    this.app.render();
+    this.markDirty();
   }
 
   gameStarted(data) {
@@ -178,7 +181,7 @@ class BombermanGame {
 
     this.chatMessages = [];
     this.startGameLoop();
-    this.app.render();
+    this.markDirty();
   }
 
   onGameStateUpdate(data) {
@@ -268,6 +271,8 @@ class BombermanGame {
         });
       });
     }
+
+    this.markDirty();
   }
 
   onGameEnded(data) {
@@ -275,13 +280,18 @@ class BombermanGame {
     this.gameState.gameEnded = true;
     this.gameState.winner = data.winner;
     this.gameEngine.stop();
-    this.app.render();
+    this.markDirty();
+  }
+
+  markDirty() {
+    this.needsRender = true;
   }
 
   handleJoinGame(nickname) {
     console.log("Joining game with nickname:", nickname);
     this.playerName = nickname;
     this.screen = "waiting";
+    this.markDirty();
     this.render();
     console.log("Sending JOIN_GAME message...");
     this.client.joinGame(nickname);
@@ -307,8 +317,11 @@ class BombermanGame {
       // Update performance metrics
       this.updatePerformanceMetrics();
 
-      // Render UI
-      this.render();
+      // Render UI only when state has changed
+      if (this.needsRender) {
+        this.render();
+        this.needsRender = false;
+      }
 
       // Continue loop
       requestAnimationFrame(gameLoop);
@@ -346,7 +359,7 @@ class BombermanGame {
     this.lobbyRemainingSeconds = 0;
     this.chatMessages = [];
     this.gameState = new GameState();
-    this.app.render();
+    this.markDirty();
   }
 
   render() {
@@ -478,13 +491,12 @@ class BombermanGame {
           ]);
 
         case "game":
-          const gameData = self.gameState.toJSON();
           const currentPlayer = self.gameState.getPlayer(self.client.playerId);
-          const tiles = gameData.map?.tiles || [];
-          const players = gameData.players || [];
-          const bombs = gameData.bombs || [];
-          const explosions = gameData.explosions || [];
-          const powerups = gameData.powerups || [];
+          const tiles = self.gameState.map?.tiles || [];
+          const players = self.gameState.getAllPlayers();
+          const bombs = self.gameState.getAllBombs();
+          const explosions = self.gameState.getAllExplosions();
+          const powerups = self.gameState.getAllPowerUps();
 
           // Build lookup sets for bombs, explosions, powerups by position
           const bombAt = {};
