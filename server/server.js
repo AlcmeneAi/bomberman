@@ -291,24 +291,12 @@ function handleMessage(ws, data, setPlayerInfo) {
       handlePlaceBomb(ws, data);
       break;
 
-    case "BOMB_EXPLODED":
-      handleBombExplosion(ws, data);
-      break;
-
     case "POWERUP_COLLECTED":
       handlePowerUpCollected(ws, data);
       break;
 
-    case "PLAYER_DAMAGED":
-      handlePlayerDamaged(ws, data);
-      break;
-
     case "CHAT_MESSAGE":
       handleChatMessage(ws, data);
-      break;
-
-    case "GAME_END":
-      handleGameEnd(ws, data);
       break;
 
     default:
@@ -393,15 +381,36 @@ function handlePlaceBomb(ws, data) {
   const playerId = findPlayerIdByWs(room, ws);
   if (!playerId) return;
 
-  const { x, y } = data;
-  const bombId = `bomb-${Date.now()}-${Math.random()}`;
+  const player = room.getPlayer(playerId);
+  if (!player || !player.isAlive) return;
 
+  const playerState = room.gameState.players.find((p) => p.id === playerId);
+  if (!playerState) return;
+
+  // Use server-authoritative position and stats
+  const x = playerState.x;
+  const y = playerState.y;
+
+  // Validate: can place bomb?
+  if ((playerState.bombsPlaced || 0) >= playerState.maxBombs) return;
+
+  // Validate: no existing bomb at this position
+  if (room.gameState.bombs.some((b) => b.x === x && b.y === y)) return;
+
+  // Validate: position is walkable
+  const tile = room.gameState.map.tiles.find((t) => t.x === x && t.y === y);
+  if (!tile || tile.type === "wall" || tile.type === "block") return;
+
+  playerState.bombsPlaced = (playerState.bombsPlaced || 0) + 1;
+  player.bombsPlaced = playerState.bombsPlaced;
+
+  const bombId = `bomb-${Date.now()}-${Math.random()}`;
   room.gameState.bombs.push({
     id: bombId,
     x: x,
     y: y,
     playerId: playerId,
-    flameRange: room.getPlayer(playerId).flameRange,
+    flameRange: playerState.flameRange,
     createdAt: Date.now(),
   });
 
@@ -414,59 +423,105 @@ function handlePlaceBomb(ws, data) {
   });
 }
 
-function handleBombExplosion(ws, data) {
-  const room = findRoomByWs(ws);
-  if (!room) return;
+/**
+ * Server-authoritative bomb explosion.
+ * Called by the game loop when a bomb's timer expires.
+ */
+function serverHandleBombExplosion(room, bomb) {
+  const explosionCells = [[bomb.x, bomb.y]];
+  const destructedBlocks = [];
 
-  const { bombId, x, y, affectedPlayers, destructedBlocks, explosionCells } =
-    data;
+  // Calculate explosion cells using server's authoritative map
+  const directions = [
+    [0, -1], // up
+    [0, 1], // down
+    [-1, 0], // left
+    [1, 0], // right
+  ];
+
+  directions.forEach(([dx, dy]) => {
+    for (let i = 1; i <= bomb.flameRange; i++) {
+      const x = bomb.x + dx * i;
+      const y = bomb.y + dy * i;
+
+      // Out of bounds
+      if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) break;
+
+      const tile = room.gameState.map.tiles.find((t) => t.x === x && t.y === y);
+      if (!tile || tile.type === "wall") break;
+
+      explosionCells.push([x, y]);
+
+      if (tile.type === "block") {
+        tile.type = "empty";
+        destructedBlocks.push({ x, y });
+
+        // Server-only powerup spawn (30% chance)
+        if (Math.random() < 0.3) {
+          const types = ["bombs", "flames", "speed"];
+          const type = types[Math.floor(Math.random() * types.length)];
+          room.gameState.powerups.push({
+            id: `powerup-${Date.now()}-${Math.random()}`,
+            x,
+            y,
+            type,
+          });
+        }
+        break; // Block stops explosion in this direction
+      }
+    }
+  });
 
   // Remove bomb from game state
-  room.gameState.bombs = room.gameState.bombs.filter((b) => b.id !== bombId);
+  room.gameState.bombs = room.gameState.bombs.filter((b) => b.id !== bomb.id);
 
-  // Handle affected players
-  affectedPlayers.forEach((playerId) => {
-    const player = room.getPlayer(playerId);
-    if (player) {
-      player.lives--;
-      if (player.lives <= 0) {
-        player.isAlive = false;
-      }
-
-      const playerState = room.gameState.players.find((p) => p.id === playerId);
-      if (playerState) {
-        playerState.lives = player.lives;
-        playerState.isAlive = player.isAlive;
-      }
-    }
-  });
-
-  // Handle destroyed blocks — update server map and broadcast to all clients
-  destructedBlocks.forEach((block) => {
-    // Update authoritative server map
-    const tile = room.gameState.map.tiles.find(
-      (t) => t.x === block.x && t.y === block.y,
+  // Decrement placing player's bombsPlaced
+  const bombOwner = room.getPlayer(bomb.playerId);
+  const bombOwnerState = room.gameState.players.find(
+    (p) => p.id === bomb.playerId,
+  );
+  if (bombOwner) {
+    bombOwner.bombsPlaced = Math.max(0, (bombOwner.bombsPlaced || 1) - 1);
+  }
+  if (bombOwnerState) {
+    bombOwnerState.bombsPlaced = Math.max(
+      0,
+      (bombOwnerState.bombsPlaced || 1) - 1,
     );
-    if (tile && tile.type === "block") {
-      tile.type = "empty";
-    }
+  }
 
-    // Random powerup spawn (30% chance)
-    if (Math.random() < 0.3) {
-      const types = ["bombs", "flames", "speed"];
-      const type = types[Math.floor(Math.random() * types.length)];
-      const powerupId = `powerup-${Date.now()}-${Math.random()}`;
-
-      room.gameState.powerups.push({
-        id: powerupId,
-        x: block.x,
-        y: block.y,
-        type: type,
-      });
+  // Apply damage to affected players (server-authoritative positions)
+  room.gameState.players.forEach((playerState) => {
+    if (!playerState.isAlive) return;
+    if (
+      explosionCells.some(
+        ([cx, cy]) => cx === playerState.x && cy === playerState.y,
+      )
+    ) {
+      playerState.lives--;
+      if (playerState.lives <= 0) {
+        playerState.isAlive = false;
+      }
+      // Sync to player map object
+      const player = room.getPlayer(playerState.id);
+      if (player) {
+        player.lives = playerState.lives;
+        player.isAlive = playerState.isAlive;
+      }
     }
   });
 
-  // Broadcast destroyed blocks so all clients update their maps
+  // Create explosion entity
+  const explosionId = `explosion-${Date.now()}-${Math.random()}`;
+  room.gameState.explosions.push({
+    id: explosionId,
+    x: bomb.x,
+    y: bomb.y,
+    cells: explosionCells,
+    createdAt: Date.now(),
+  });
+
+  // Broadcast destroyed blocks
   if (destructedBlocks.length > 0) {
     room.broadcastToAll({
       type: "BLOCKS_DESTROYED",
@@ -474,38 +529,35 @@ function handleBombExplosion(ws, data) {
     });
   }
 
-  // Create explosion entity
-  const explosionId = `explosion-${Date.now()}`;
-  room.gameState.explosions.push({
-    id: explosionId,
-    x: x,
-    y: y,
-    cells: explosionCells,
-    createdAt: Date.now(),
-  });
-
-  // Remove explosion after 500ms
-  setTimeout(() => {
-    room.gameState.explosions = room.gameState.explosions.filter(
-      (e) => e.id !== explosionId,
-    );
-  }, 500);
-
-  // Broadcast explosion to all
+  // Broadcast explosion for immediate visual
   room.broadcastToAll({
     type: "EXPLOSION",
     explosionId: explosionId,
-    x: x,
-    y: y,
-    affectedPlayers: affectedPlayers,
-    explosionCells: explosionCells,
+    x: bomb.x,
+    y: bomb.y,
+    cells: explosionCells,
   });
 
-  // Check if any players were eliminated
+  // Check win condition (single authoritative check)
   const alivePlayers = room.gameState.players.filter((p) => p.isAlive);
-  if (alivePlayers.length === 1) {
+  if (alivePlayers.length === 1 && room.gameState.players.length > 1) {
     room.endGame(alivePlayers[0].id);
+  } else if (alivePlayers.length === 0 && room.gameState.players.length > 1) {
+    // Draw — everyone died
+    room.gameState.gameEnded = true;
+    room.broadcastToAll({
+      type: "GAME_ENDED",
+      winner: null,
+    });
   }
+
+  // Chain explosions: check if explosion cells hit other bombs
+  const chainBombs = room.gameState.bombs.filter((b) =>
+    explosionCells.some(([cx, cy]) => cx === b.x && cy === b.y),
+  );
+  chainBombs.forEach((chainBomb) => {
+    serverHandleBombExplosion(room, chainBomb);
+  });
 }
 
 function handlePowerUpCollected(ws, data) {
@@ -553,25 +605,6 @@ function handlePowerUpCollected(ws, data) {
   });
 }
 
-function handlePlayerDamaged(ws, data) {
-  const room = findRoomByWs(ws);
-  if (!room) return;
-
-  const { playerId, lives, isEliminated } = data;
-  const playerState = room.gameState.players.find((p) => p.id === playerId);
-
-  if (playerState) {
-    playerState.lives = lives;
-    playerState.isAlive = !isEliminated;
-  }
-
-  // Check if game should end
-  const alivePlayers = room.gameState.players.filter((p) => p.isAlive);
-  if (alivePlayers.length === 1) {
-    room.endGame(alivePlayers[0].id);
-  }
-}
-
 function handleChatMessage(ws, data) {
   const room = findRoomByWs(ws);
   if (!room) return;
@@ -588,14 +621,6 @@ function handleChatMessage(ws, data) {
       timestamp: Date.now(),
     });
   }
-}
-
-function handleGameEnd(ws, data) {
-  const room = findRoomByWs(ws);
-  if (!room) return;
-
-  const { winnerId, winnerName } = data;
-  room.endGame(winnerId);
 }
 
 function findRoomByWs(ws) {
@@ -661,6 +686,21 @@ setInterval(() => {
         });
       }
     } else if (!room.gameState.gameEnded) {
+      const now = Date.now();
+
+      // Server-authoritative bomb timer: explode expired bombs
+      const expiredBombs = room.gameState.bombs.filter(
+        (b) => now - b.createdAt >= 3000,
+      );
+      expiredBombs.forEach((bomb) => {
+        serverHandleBombExplosion(room, bomb);
+      });
+
+      // Clean up expired explosions (older than 500ms)
+      room.gameState.explosions = room.gameState.explosions.filter(
+        (e) => now - e.createdAt < 500,
+      );
+
       // Send periodic state updates during game
       room.broadcastToAll({
         type: "GAME_STATE_UPDATE",

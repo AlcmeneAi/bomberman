@@ -92,6 +92,29 @@ class BombermanGame {
       this.app.render();
     });
 
+    this.client.on("explosion", (data) => {
+      if (!this.gameState) return;
+      this.gameState.addExplosion({
+        id: data.explosionId,
+        x: data.x,
+        y: data.y,
+        cells: data.cells || [[data.x, data.y]],
+        createdAt: Date.now(),
+        isActive: function (currentTime) {
+          return currentTime - this.createdAt < 500;
+        },
+        toJSON: function () {
+          return {
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            cells: this.cells,
+          };
+        },
+      });
+      this.app.render();
+    });
+
     this.client.on("lobbyTimerUpdate", (data) => {
       this.lobbyPhase = data.phase;
       this.lobbyRemainingSeconds = data.remainingSeconds;
@@ -215,6 +238,31 @@ class BombermanGame {
               x: this.x,
               y: this.y,
               type: this.type,
+            };
+          },
+        });
+      });
+    }
+
+    // Update explosions
+    if (data.explosions) {
+      this.gameState.explosions.clear();
+      data.explosions.forEach((explosionData) => {
+        this.gameState.addExplosion({
+          id: explosionData.id,
+          x: explosionData.x,
+          y: explosionData.y,
+          cells: explosionData.cells || [[explosionData.x, explosionData.y]],
+          createdAt: Date.now(),
+          isActive: function (currentTime) {
+            return currentTime - this.createdAt < 500;
+          },
+          toJSON: function () {
+            return {
+              id: this.id,
+              x: this.x,
+              y: this.y,
+              cells: this.cells,
             };
           },
         });

@@ -3,8 +3,6 @@
  * Handles game loop, physics, collision detection, and game state management
  */
 
-import { Player, Bomb, PowerUp, Explosion, GameState } from "./entities.js";
-
 export class GameEngine {
   constructor(gameState, gameClient) {
     this.gameState = gameState;
@@ -51,125 +49,11 @@ export class GameEngine {
     this.currentTime = Date.now();
     this.deltaTime = deltaTime;
 
-    // Update explosions
-    this.updateExplosions();
-
-    // Remove expired bombs
-    this.updateBombs();
-
     // Update player positions based on input
     this.updatePlayerMovement();
 
-    // Check for collisions (player with powerups, explosions, etc.)
+    // Check for collisions (player with powerups)
     this.updateCollisions();
-
-    // Check for game end condition
-    if (this.gameState.checkGameEnd()) {
-      this.gameClient.send("GAME_END", {
-        winnerId: this.gameState.winner.id,
-        winnerName: this.gameState.winner.name,
-      });
-    }
-  }
-
-  updateExplosions() {
-    const explosionsToRemove = [];
-
-    this.gameState.getAllExplosions().forEach((explosion) => {
-      if (!explosion.isActive(this.currentTime)) {
-        explosionsToRemove.push(explosion.id);
-      }
-    });
-
-    explosionsToRemove.forEach((explosionId) => {
-      this.gameState.removeExplosion(explosionId);
-    });
-  }
-
-  updateBombs() {
-    const bombsToExplode = [];
-
-    this.gameState.getAllBombs().forEach((bomb) => {
-      if (bomb.isExploded(this.currentTime) && !bomb.exploded) {
-        bomb.exploded = true;
-        bombsToExplode.push(bomb);
-      }
-    });
-
-    bombsToExplode.forEach((bomb) => {
-      this.handleBombExplosion(bomb);
-    });
-  }
-
-  handleBombExplosion(bomb) {
-    const explosionCells = [[bomb.x, bomb.y]];
-    const destructedBlocks = [];
-    const affectedPlayers = new Set();
-
-    // Check explosion in all 4 directions
-    const directions = [
-      [0, -1], // up
-      [0, 1], // down
-      [-1, 0], // left
-      [1, 0], // right
-    ];
-
-    directions.forEach(([dx, dy]) => {
-      for (let i = 1; i <= bomb.flameRange; i++) {
-        const x = bomb.x + dx * i;
-        const y = bomb.y + dy * i;
-        const tile = this.gameState.map.getTile(x, y);
-
-        if (!tile || tile.type === "wall") {
-          break; // Stop spreading in this direction
-        }
-
-        explosionCells.push([x, y]);
-
-        if (tile.type === "block") {
-          this.gameState.map.destroyBlock(x, y);
-          destructedBlocks.push({ x, y });
-
-          // Random powerup spawn
-          if (Math.random() < 0.3) {
-            const types = ["bombs", "flames", "speed"];
-            const type = types[Math.floor(Math.random() * types.length)];
-            const powerup = new PowerUp(this.generateId("powerup"), x, y, type);
-            this.gameState.addPowerUp(powerup);
-          }
-          break; // Block stops explosion
-        }
-      }
-    });
-
-    // Check for players in explosion
-    this.gameState.getAllPlayers().forEach((player) => {
-      if (explosionCells.some(([x, y]) => x === player.x && y === player.y)) {
-        affectedPlayers.add(player.id);
-      }
-    });
-
-    // Create explosion entity
-    const explosion = new Explosion(
-      this.generateId("explosion"),
-      bomb.x,
-      bomb.y,
-    );
-    explosion.cells = explosionCells;
-    this.gameState.addExplosion(explosion);
-
-    // Remove bomb
-    this.gameState.removeBomb(bomb.id);
-
-    // Notify server
-    this.gameClient.send("BOMB_EXPLODED", {
-      bombId: bomb.id,
-      x: bomb.x,
-      y: bomb.y,
-      affectedPlayers: Array.from(affectedPlayers),
-      destructedBlocks,
-      explosionCells,
-    });
   }
 
   handleBombPlacement() {
@@ -177,17 +61,7 @@ export class GameEngine {
       (p) => p.id === this.gameClient.playerId,
     );
 
-    if (player && player.canPlaceBomb()) {
-      player.placeBomb();
-      const bomb = new Bomb(
-        this.generateId("bomb"),
-        player.x,
-        player.y,
-        player.id,
-        player.flameRange,
-      );
-
-      this.gameState.addBomb(bomb);
+    if (player && player.isAlive && player.canPlaceBomb()) {
       this.gameClient.placeBomb(player.x, player.y);
     }
   }
@@ -279,26 +153,6 @@ export class GameEngine {
           powerupId: powerup.id,
           playerId: player.id,
         });
-      }
-    }
-
-    // Check explosion collision
-    for (const explosion of this.gameState.getAllExplosions()) {
-      if (explosion.cells.some(([x, y]) => x === player.x && y === player.y)) {
-        if (player.takeDamage()) {
-          player.isAlive = false;
-          this.gameClient.send("PLAYER_DAMAGED", {
-            playerId: player.id,
-            lives: player.lives,
-            isEliminated: true,
-          });
-        } else {
-          this.gameClient.send("PLAYER_DAMAGED", {
-            playerId: player.id,
-            lives: player.lives,
-            isEliminated: false,
-          });
-        }
       }
     }
   }
