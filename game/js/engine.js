@@ -20,6 +20,7 @@ export class GameEngine {
     this.keysPressed = {};
     this.lastMoveTime = 0;
     this.baseMovementDelay = 150; // ms between moves at speed 1
+    this.lastSentDirection = null;
 
     // Bind event listeners
     this.setupKeyboardListeners();
@@ -79,43 +80,58 @@ export class GameEngine {
     if (!player || !player.isAlive) return;
 
     const movementDelay = this.baseMovementDelay / (player.speed || 1);
-    if (currentTime - this.lastMoveTime < movementDelay) {
-      return;
-    }
 
+    let direction = "idle";
     let moved = false;
     let newX = player.x;
     let newY = player.y;
-    let direction = "idle";
 
     if (this.keysPressed["arrowup"] || this.keysPressed["w"]) {
-      newY = Math.max(0, player.y - 1);
       direction = "up";
       moved = true;
     } else if (this.keysPressed["arrowdown"] || this.keysPressed["s"]) {
-      newY = Math.min(this.gameState.map.height - 1, player.y + 1);
       direction = "down";
       moved = true;
     } else if (this.keysPressed["arrowleft"] || this.keysPressed["a"]) {
-      newX = Math.max(0, player.x - 1);
       direction = "left";
       moved = true;
     } else if (this.keysPressed["arrowright"] || this.keysPressed["d"]) {
-      newX = Math.min(this.gameState.map.width - 1, player.x + 1);
       direction = "right";
       moved = true;
     }
 
+    // Send idle transition immediately (bypass throttle)
+    if (direction === "idle" && this.lastSentDirection !== "idle") {
+      player.direction = "idle";
+      this.gameClient.playerMove(player.x, player.y, "idle");
+      this.lastSentDirection = "idle";
+      return;
+    }
+
+    if (!moved) return;
+    if (currentTime - this.lastMoveTime < movementDelay) return;
+
+    if (direction === "up") {
+      newY = Math.max(0, player.y - 1);
+    } else if (direction === "down") {
+      newY = Math.min(this.gameState.map.height - 1, player.y + 1);
+    } else if (direction === "left") {
+      newX = Math.max(0, player.x - 1);
+    } else if (direction === "right") {
+      newX = Math.min(this.gameState.map.width - 1, player.x + 1);
+    }
+
     player.direction = direction;
-    if (direction === "left" || direction === "right") {
+    if (direction !== "idle") {
       player.facing = direction;
     }
 
-    if (moved && this.isPositionValid(newX, newY)) {
+    if (this.isPositionValid(newX, newY)) {
       player.x = newX;
       player.y = newY;
       this.lastMoveTime = currentTime;
       this.gameClient.playerMove(newX, newY, direction);
+      this.lastSentDirection = direction;
     }
   }
 

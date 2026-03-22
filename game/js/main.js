@@ -133,7 +133,10 @@ class BombermanGame {
 
     this.client.on("disconnected", () => {
       console.log("Disconnected from server");
-      alert("Disconnected from server. Please refresh the page.");
+      // Only alert if we're in the game or waiting (not when intentionally disconnecting via Play Again)
+      if (this.screen === "game" || this.screen === "waiting") {
+        alert("Disconnected from server. Please refresh the page.");
+      }
     });
   }
 
@@ -287,12 +290,26 @@ class BombermanGame {
     this.needsRender = true;
   }
 
-  handleJoinGame(nickname) {
+  async handleJoinGame(nickname) {
     console.log("Joining game with nickname:", nickname);
     this.playerName = nickname;
     this.screen = "waiting";
     this.markDirty();
     this.render();
+
+    // Establish a fresh connection if not connected
+    if (!this.client.ws || this.client.ws.readyState !== WebSocket.OPEN) {
+      try {
+        await this.client.connect();
+      } catch (error) {
+        console.error("Failed to reconnect:", error);
+        alert("Failed to connect to server. Make sure the server is running.");
+        this.screen = "login";
+        this.markDirty();
+        return;
+      }
+    }
+
     console.log("Sending JOIN_GAME message...");
     this.client.joinGame(nickname);
   }
@@ -350,6 +367,9 @@ class BombermanGame {
   }
 
   handlePlayAgain() {
+    // Disconnect from the server so the room is cleaned up
+    this.client.disconnect();
+
     // Reset and go back to login
     this.screen = "login";
     this.playerName = "";
@@ -359,6 +379,7 @@ class BombermanGame {
     this.lobbyRemainingSeconds = 0;
     this.chatMessages = [];
     this.gameState = new GameState();
+    this.gameEngine = null;
     this.markDirty();
   }
 
@@ -554,7 +575,10 @@ class BombermanGame {
                     dirClass = "dead";
                   } else if (player.direction && player.direction !== "idle") {
                     dirClass = `walking-${player.direction}`;
-                  } else if (player.facing) {
+                  } else if (
+                    player.facing === "left" ||
+                    player.facing === "right"
+                  ) {
                     dirClass = `facing-${player.facing}`;
                   }
                   return self.app.createElement(

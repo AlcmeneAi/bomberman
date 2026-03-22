@@ -353,8 +353,7 @@ function handlePlayerMove(ws, data) {
     player.x = x;
     player.y = y;
     if (direction) player.direction = direction;
-    if (direction === "left" || direction === "right")
-      player.facing = direction;
+    if (direction && direction !== "idle") player.facing = direction;
 
     // Update game state
     const playerState = room.gameState.players.find((p) => p.id === playerId);
@@ -362,8 +361,7 @@ function handlePlayerMove(ws, data) {
       playerState.x = x;
       playerState.y = y;
       if (direction) playerState.direction = direction;
-      if (direction === "left" || direction === "right")
-        playerState.facing = direction;
+      if (direction && direction !== "idle") playerState.facing = direction;
     }
 
     // Broadcast to all players
