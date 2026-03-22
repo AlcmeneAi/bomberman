@@ -138,6 +138,10 @@ export class GameClient {
         this.emit("countdownStarted", data);
         break;
 
+      case "JOIN_REJECTED":
+        this.emit("joinRejected", data);
+        break;
+
       default:
         console.warn("Unknown message type:", type);
     }

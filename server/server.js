@@ -315,6 +315,18 @@ function handleJoinGame(ws, data, setPlayerInfo) {
     console.log("Created new game room:", roomId);
   }
 
+  // Check for duplicate name (case-sensitive)
+  const existingNames = currentGameRoom.getPlayerList();
+  if (existingNames.includes(playerName)) {
+    ws.send(
+      JSON.stringify({
+        type: "JOIN_REJECTED",
+        reason: "A player with that name already exists in the lobby.",
+      }),
+    );
+    return;
+  }
+
   const playerId = currentGameRoom.addPlayer(ws, { playerName });
   setPlayerInfo(playerId, currentGameRoom);
 

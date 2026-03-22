@@ -131,6 +131,13 @@ class BombermanGame {
       this.markDirty();
     });
 
+    this.client.on("joinRejected", (data) => {
+      console.log("Join rejected:", data.reason);
+      alert(data.reason);
+      this.screen = "login";
+      this.markDirty();
+    });
+
     this.client.on("disconnected", () => {
       console.log("Disconnected from server");
       // Only alert if we're in the game or waiting (not when intentionally disconnecting via Play Again)
@@ -158,6 +165,7 @@ class BombermanGame {
     this.client.playerId = data.playerId;
     this.playerList = data.players || [this.playerName];
     this.playerCount = this.playerList.length;
+    this.screen = "waiting";
     this.markDirty();
   }
 
@@ -293,9 +301,6 @@ class BombermanGame {
   async handleJoinGame(nickname) {
     console.log("Joining game with nickname:", nickname);
     this.playerName = nickname;
-    this.screen = "waiting";
-    this.markDirty();
-    this.render();
 
     // Establish a fresh connection if not connected
     if (!this.client.ws || this.client.ws.readyState !== WebSocket.OPEN) {
@@ -304,8 +309,6 @@ class BombermanGame {
       } catch (error) {
         console.error("Failed to reconnect:", error);
         alert("Failed to connect to server. Make sure the server is running.");
-        this.screen = "login";
-        this.markDirty();
         return;
       }
     }
