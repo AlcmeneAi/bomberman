@@ -325,6 +325,14 @@ class BombermanGame {
       this.fps = this.frameCount;
       this.frameCount = 0;
       this.perfStartTime = now;
+
+      // Update FPS display
+      if (!this.fpsElement) {
+        this.fpsElement = document.createElement("div");
+        this.fpsElement.className = "performance-monitor";
+        document.body.appendChild(this.fpsElement);
+      }
+      this.fpsElement.textContent = `FPS: ${this.fps}`;
     }
   }
 
