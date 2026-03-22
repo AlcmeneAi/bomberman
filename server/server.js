@@ -514,14 +514,41 @@ function handlePowerUpCollected(ws, data) {
 
   const { powerupId, playerId } = data;
 
+  // Find the powerup before removing it so we know its type
+  const powerup = room.gameState.powerups.find((p) => p.id === powerupId);
+
+  // Apply powerup effect to the server-side player state
+  if (powerup) {
+    const player = room.getPlayer(playerId);
+    const playerState = room.gameState.players.find((p) => p.id === playerId);
+
+    if (player && playerState) {
+      switch (powerup.type) {
+        case "speed":
+          player.speed = Math.min((player.speed || 1) + 0.5, 3);
+          playerState.speed = player.speed;
+          break;
+        case "bombs":
+          player.maxBombs = (player.maxBombs || 1) + 1;
+          playerState.maxBombs = player.maxBombs;
+          break;
+        case "flames":
+          player.flameRange = (player.flameRange || 1) + 1;
+          playerState.flameRange = player.flameRange;
+          break;
+      }
+    }
+  }
+
   // Remove powerup
   room.gameState.powerups = room.gameState.powerups.filter(
     (p) => p.id !== powerupId,
   );
 
-  // Broadcast to all
+  // Broadcast updated state to all
   room.broadcastToAll({
     type: "GAME_STATE_UPDATE",
+    players: room.gameState.players,
     powerups: room.gameState.powerups,
   });
 }

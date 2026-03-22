@@ -172,6 +172,7 @@ class BombermanGame {
           player.isAlive = playerData.isAlive;
           player.maxBombs = playerData.maxBombs;
           player.flameRange = playerData.flameRange;
+          player.speed = playerData.speed;
         }
       });
     }

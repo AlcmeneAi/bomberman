@@ -3,7 +3,7 @@
  * Handles game loop, physics, collision detection, and game state management
  */
 
-import { Player, Bomb, PowerUp, Explosion, GameState } from './entities.js';
+import { Player, Bomb, PowerUp, Explosion, GameState } from "./entities.js";
 
 export class GameEngine {
   constructor(gameState, gameClient) {
@@ -17,28 +17,28 @@ export class GameEngine {
     this.targetFps = 60;
     this.perfStartTime = Date.now();
     this.isRunning = false;
-    
+
     // Input handling
     this.keysPressed = {};
     this.lastMoveTime = 0;
-    this.movementDelay = 100; // ms between moves
-    
+    this.baseMovementDelay = 150; // ms between moves at speed 1
+
     // Bind event listeners
     this.setupKeyboardListeners();
   }
 
   setupKeyboardListeners() {
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener("keydown", (e) => {
       this.keysPressed[e.key.toLowerCase()] = true;
-      
+
       // Handle bomb placement
-      if (e.key === ' ' || e.key === 'Enter') {
+      if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
         this.handleBombPlacement();
       }
     });
 
-    document.addEventListener('keyup', (e) => {
+    document.addEventListener("keyup", (e) => {
       this.keysPressed[e.key.toLowerCase()] = false;
     });
   }
@@ -65,38 +65,38 @@ export class GameEngine {
 
     // Check for game end condition
     if (this.gameState.checkGameEnd()) {
-      this.gameClient.send('GAME_END', {
+      this.gameClient.send("GAME_END", {
         winnerId: this.gameState.winner.id,
-        winnerName: this.gameState.winner.name
+        winnerName: this.gameState.winner.name,
       });
     }
   }
 
   updateExplosions() {
     const explosionsToRemove = [];
-    
-    this.gameState.getAllExplosions().forEach(explosion => {
+
+    this.gameState.getAllExplosions().forEach((explosion) => {
       if (!explosion.isActive(this.currentTime)) {
         explosionsToRemove.push(explosion.id);
       }
     });
 
-    explosionsToRemove.forEach(explosionId => {
+    explosionsToRemove.forEach((explosionId) => {
       this.gameState.removeExplosion(explosionId);
     });
   }
 
   updateBombs() {
     const bombsToExplode = [];
-    
-    this.gameState.getAllBombs().forEach(bomb => {
+
+    this.gameState.getAllBombs().forEach((bomb) => {
       if (bomb.isExploded(this.currentTime) && !bomb.exploded) {
         bomb.exploded = true;
         bombsToExplode.push(bomb);
       }
     });
 
-    bombsToExplode.forEach(bomb => {
+    bombsToExplode.forEach((bomb) => {
       this.handleBombExplosion(bomb);
     });
   }
@@ -109,9 +109,9 @@ export class GameEngine {
     // Check explosion in all 4 directions
     const directions = [
       [0, -1], // up
-      [0, 1],  // down
+      [0, 1], // down
       [-1, 0], // left
-      [1, 0]   // right
+      [1, 0], // right
     ];
 
     directions.forEach(([dx, dy]) => {
@@ -120,21 +120,21 @@ export class GameEngine {
         const y = bomb.y + dy * i;
         const tile = this.gameState.map.getTile(x, y);
 
-        if (!tile || tile.type === 'wall') {
+        if (!tile || tile.type === "wall") {
           break; // Stop spreading in this direction
         }
 
         explosionCells.push([x, y]);
 
-        if (tile.type === 'block') {
+        if (tile.type === "block") {
           this.gameState.map.destroyBlock(x, y);
           destructedBlocks.push({ x, y });
-          
+
           // Random powerup spawn
           if (Math.random() < 0.3) {
-            const types = ['bombs', 'flames', 'speed'];
+            const types = ["bombs", "flames", "speed"];
             const type = types[Math.floor(Math.random() * types.length)];
-            const powerup = new PowerUp(this.generateId('powerup'), x, y, type);
+            const powerup = new PowerUp(this.generateId("powerup"), x, y, type);
             this.gameState.addPowerUp(powerup);
           }
           break; // Block stops explosion
@@ -143,14 +143,18 @@ export class GameEngine {
     });
 
     // Check for players in explosion
-    this.gameState.getAllPlayers().forEach(player => {
+    this.gameState.getAllPlayers().forEach((player) => {
       if (explosionCells.some(([x, y]) => x === player.x && y === player.y)) {
         affectedPlayers.add(player.id);
       }
     });
 
     // Create explosion entity
-    const explosion = new Explosion(this.generateId('explosion'), bomb.x, bomb.y);
+    const explosion = new Explosion(
+      this.generateId("explosion"),
+      bomb.x,
+      bomb.y,
+    );
     explosion.cells = explosionCells;
     this.gameState.addExplosion(explosion);
 
@@ -158,29 +162,31 @@ export class GameEngine {
     this.gameState.removeBomb(bomb.id);
 
     // Notify server
-    this.gameClient.send('BOMB_EXPLODED', {
+    this.gameClient.send("BOMB_EXPLODED", {
       bombId: bomb.id,
       x: bomb.x,
       y: bomb.y,
       affectedPlayers: Array.from(affectedPlayers),
       destructedBlocks,
-      explosionCells
+      explosionCells,
     });
   }
 
   handleBombPlacement() {
-    const player = Array.from(this.gameState.players.values()).find(p => p.id === this.gameClient.playerId);
-    
+    const player = Array.from(this.gameState.players.values()).find(
+      (p) => p.id === this.gameClient.playerId,
+    );
+
     if (player && player.canPlaceBomb()) {
       player.placeBomb();
       const bomb = new Bomb(
-        this.generateId('bomb'),
+        this.generateId("bomb"),
         player.x,
         player.y,
         player.id,
-        player.flameRange
+        player.flameRange,
       );
-      
+
       this.gameState.addBomb(bomb);
       this.gameClient.placeBomb(player.x, player.y);
     }
@@ -188,34 +194,37 @@ export class GameEngine {
 
   updatePlayerMovement() {
     const currentTime = Date.now();
-    
-    if (currentTime - this.lastMoveTime < this.movementDelay) {
+
+    const player = Array.from(this.gameState.players.values()).find(
+      (p) => p.id === this.gameClient.playerId,
+    );
+    if (!player) return;
+
+    const movementDelay = this.baseMovementDelay / (player.speed || 1);
+    if (currentTime - this.lastMoveTime < movementDelay) {
       return;
     }
-
-    const player = Array.from(this.gameState.players.values()).find(p => p.id === this.gameClient.playerId);
-    if (!player) return;
 
     let moved = false;
     let newX = player.x;
     let newY = player.y;
-    let direction = 'idle';
+    let direction = "idle";
 
-    if (this.keysPressed['arrowup'] || this.keysPressed['w']) {
+    if (this.keysPressed["arrowup"] || this.keysPressed["w"]) {
       newY = Math.max(0, player.y - 1);
-      direction = 'up';
+      direction = "up";
       moved = true;
-    } else if (this.keysPressed['arrowdown'] || this.keysPressed['s']) {
+    } else if (this.keysPressed["arrowdown"] || this.keysPressed["s"]) {
       newY = Math.min(this.gameState.map.height - 1, player.y + 1);
-      direction = 'down';
+      direction = "down";
       moved = true;
-    } else if (this.keysPressed['arrowleft'] || this.keysPressed['a']) {
+    } else if (this.keysPressed["arrowleft"] || this.keysPressed["a"]) {
       newX = Math.max(0, player.x - 1);
-      direction = 'left';
+      direction = "left";
       moved = true;
-    } else if (this.keysPressed['arrowright'] || this.keysPressed['d']) {
+    } else if (this.keysPressed["arrowright"] || this.keysPressed["d"]) {
       newX = Math.min(this.gameState.map.width - 1, player.x + 1);
-      direction = 'right';
+      direction = "right";
       moved = true;
     }
 
@@ -253,7 +262,9 @@ export class GameEngine {
   }
 
   updateCollisions() {
-    const player = Array.from(this.gameState.players.values()).find(p => p.id === this.gameClient.playerId);
+    const player = Array.from(this.gameState.players.values()).find(
+      (p) => p.id === this.gameClient.playerId,
+    );
     if (!player) return;
 
     // Check powerup collision
@@ -261,9 +272,9 @@ export class GameEngine {
       if (player.x === powerup.x && player.y === powerup.y) {
         this.applyPowerUp(player, powerup);
         this.gameState.removePowerUp(powerup.id);
-        this.gameClient.send('POWERUP_COLLECTED', {
+        this.gameClient.send("POWERUP_COLLECTED", {
           powerupId: powerup.id,
-          playerId: player.id
+          playerId: player.id,
         });
       }
     }
@@ -273,16 +284,16 @@ export class GameEngine {
       if (explosion.cells.some(([x, y]) => x === player.x && y === player.y)) {
         if (player.takeDamage()) {
           player.isAlive = false;
-          this.gameClient.send('PLAYER_DAMAGED', {
+          this.gameClient.send("PLAYER_DAMAGED", {
             playerId: player.id,
             lives: player.lives,
-            isEliminated: true
+            isEliminated: true,
           });
         } else {
-          this.gameClient.send('PLAYER_DAMAGED', {
+          this.gameClient.send("PLAYER_DAMAGED", {
             playerId: player.id,
             lives: player.lives,
-            isEliminated: false
+            isEliminated: false,
           });
         }
       }
@@ -291,13 +302,13 @@ export class GameEngine {
 
   applyPowerUp(player, powerup) {
     switch (powerup.type) {
-      case 'bombs':
+      case "bombs":
         player.addBombPowerUp();
         break;
-      case 'flames':
+      case "flames":
         player.addFlamePowerUp();
         break;
-      case 'speed':
+      case "speed":
         player.addSpeedPowerUp();
         break;
     }
@@ -319,7 +330,7 @@ export class GameEngine {
 
     return {
       fps: this.fps,
-      deltaTime: this.deltaTime
+      deltaTime: this.deltaTime,
     };
   }
 
