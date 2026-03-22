@@ -14,7 +14,7 @@ export class Player {
     this.bombsPlaced = 0;
     this.flameRange = 1;
     this.speed = 1;
-    this.direction = 'idle'; // idle, up, down, left, right
+    this.direction = "idle"; // idle, up, down, left, right
     this.isAlive = true;
   }
 
@@ -155,9 +155,20 @@ export class GameMap {
     this.tiles = this.initializeTiles();
   }
 
+  /**
+   * Create a GameMap from server-provided data instead of generating randomly.
+   */
+  static fromServer(mapData) {
+    const map = Object.create(GameMap.prototype);
+    map.width = mapData.width;
+    map.height = mapData.height;
+    map.tiles = mapData.tiles;
+    return map;
+  }
+
   initializeTiles() {
     const tiles = [];
-    
+
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
         // Create walls at even positions (classic Bomberman pattern)
@@ -165,7 +176,7 @@ export class GameMap {
           tiles.push({
             x,
             y,
-            type: 'wall', // Indestructible
+            type: "wall", // Indestructible
           });
         }
         // Create safe zones in corners (no blocks)
@@ -178,7 +189,7 @@ export class GameMap {
           tiles.push({
             x,
             y,
-            type: 'empty',
+            type: "empty",
           });
         }
         // Randomly place destructible blocks
@@ -186,7 +197,7 @@ export class GameMap {
           tiles.push({
             x,
             y,
-            type: 'block', // Destructible
+            type: "block", // Destructible
           });
         }
         // Empty space
@@ -194,24 +205,24 @@ export class GameMap {
           tiles.push({
             x,
             y,
-            type: 'empty',
+            type: "empty",
           });
         }
       }
     }
-    
+
     return tiles;
   }
 
   getTile(x, y) {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
-      return { type: 'wall' };
+      return { type: "wall" };
     }
-    return this.tiles.find(t => t.x === x && t.y === y);
+    return this.tiles.find((t) => t.x === x && t.y === y);
   }
 
   getTilesByType(type) {
-    return this.tiles.filter(t => t.type === type);
+    return this.tiles.filter((t) => t.type === type);
   }
 
   isWalkable(x, y) {
@@ -219,13 +230,13 @@ export class GameMap {
       return false;
     }
     const tile = this.getTile(x, y);
-    return tile && tile.type === 'empty';
+    return tile && tile.type === "empty";
   }
 
   destroyBlock(x, y) {
     const tile = this.getTile(x, y);
-    if (tile && tile.type === 'block') {
-      tile.type = 'empty';
+    if (tile && tile.type === "block") {
+      tile.type = "empty";
       return true;
     }
     return false;
@@ -241,8 +252,10 @@ export class GameMap {
 }
 
 export class GameState {
-  constructor(mapWidth = 13, mapHeight = 13) {
-    this.map = new GameMap(mapWidth, mapHeight);
+  constructor(mapWidth = 13, mapHeight = 13, mapData = null) {
+    this.map = mapData
+      ? GameMap.fromServer(mapData)
+      : new GameMap(mapWidth, mapHeight);
     this.players = new Map(); // playerId -> Player
     this.bombs = new Map(); // bombId -> Bomb
     this.explosions = new Map(); // explosionId -> Explosion
@@ -327,7 +340,7 @@ export class GameState {
   }
 
   getAlivePlayers() {
-    return this.getAllPlayers().filter(p => p.isAlive);
+    return this.getAllPlayers().filter((p) => p.isAlive);
   }
 
   checkGameEnd() {
@@ -343,10 +356,10 @@ export class GameState {
   toJSON() {
     return {
       map: this.map.toJSON(),
-      players: Array.from(this.players.values()).map(p => p.toJSON()),
-      bombs: Array.from(this.bombs.values()).map(b => b.toJSON()),
-      explosions: Array.from(this.explosions.values()).map(e => e.toJSON()),
-      powerups: Array.from(this.powerups.values()).map(p => p.toJSON()),
+      players: Array.from(this.players.values()).map((p) => p.toJSON()),
+      bombs: Array.from(this.bombs.values()).map((b) => b.toJSON()),
+      explosions: Array.from(this.explosions.values()).map((e) => e.toJSON()),
+      powerups: Array.from(this.powerups.values()).map((p) => p.toJSON()),
       gameStarted: this.gameStarted,
       gameEnded: this.gameEnded,
       winner: this.winner ? this.winner.toJSON() : null,

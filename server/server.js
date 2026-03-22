@@ -3,8 +3,8 @@
  * Handles multiplayer game logic, player management, and game state synchronization
  */
 
-const WebSocket = require('ws');
-const http = require('http');
+const WebSocket = require("ws");
+const http = require("http");
 
 const server = http.createServer();
 const wss = new WebSocket.Server({ server });
@@ -21,20 +21,58 @@ const PLAYER_LIMIT = 4;
 const MIN_PLAYERS = 2;
 const WAITING_TIME_BEFORE_COUNTDOWN = 20000; // 20 seconds
 const COUNTDOWN_TIME = 10000; // 10 seconds
+const MAP_WIDTH = 13;
+const MAP_HEIGHT = 13;
+
+/**
+ * Generate the game map on the server so all players share the same layout.
+ * Replicates the same algorithm as the client-side GameMap.initializeTiles().
+ */
+function generateMap(width = MAP_WIDTH, height = MAP_HEIGHT) {
+  const tiles = [];
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      // Indestructible walls at odd×odd positions
+      if (x % 2 === 1 && y % 2 === 1) {
+        tiles.push({ x, y, type: "wall" });
+      }
+      // Safe zones: 2×2 empty area in each corner (spawn points)
+      else if (
+        (x <= 1 && y <= 1) ||
+        (x >= width - 2 && y <= 1) ||
+        (x <= 1 && y >= height - 2) ||
+        (x >= width - 2 && y >= height - 2)
+      ) {
+        tiles.push({ x, y, type: "empty" });
+      }
+      // Random destructible blocks (65% chance)
+      else if (Math.random() < 0.65) {
+        tiles.push({ x, y, type: "block" });
+      }
+      // Empty space
+      else {
+        tiles.push({ x, y, type: "empty" });
+      }
+    }
+  }
+
+  return { width, height, tiles };
+}
 
 class GameRoom {
   constructor(roomId) {
     this.id = roomId;
     this.players = new Map();
     this.gameState = {
-      map: null,
+      map: generateMap(),
       players: [],
       bombs: [],
       explosions: [],
       powerups: [],
       gameStarted: false,
       gameEnded: false,
-      winner: null
+      winner: null,
     };
     this.startTime = Date.now();
     this.countdownStartTime = null;
@@ -55,16 +93,16 @@ class GameRoom {
       flameRange: 1,
       speed: 1,
       isAlive: true,
-      ws: ws
+      ws: ws,
     };
 
     // Set starting position based on player index
     const index = this.players.size;
     const positions = [
-      { x: 0,  y: 0,  direction: 'idle', facing: 'right' },  // Top-left     → faces right
-      { x: 12, y: 0,  direction: 'idle', facing: 'left'  },  // Top-right    → faces left
-      { x: 0,  y: 12, direction: 'idle', facing: 'right' },  // Bottom-left  → faces right
-      { x: 12, y: 12, direction: 'idle', facing: 'left'  },  // Bottom-right → faces left
+      { x: 0, y: 0, direction: "idle", facing: "right" }, // Top-left     → faces right
+      { x: 12, y: 0, direction: "idle", facing: "left" }, // Top-right    → faces left
+      { x: 0, y: 12, direction: "idle", facing: "right" }, // Bottom-left  → faces right
+      { x: 12, y: 12, direction: "idle", facing: "left" }, // Bottom-right → faces left
     ];
 
     if (index < positions.length) {
@@ -84,8 +122,8 @@ class GameRoom {
       flameRange: player.flameRange,
       speed: player.speed,
       isAlive: player.isAlive,
-      direction: 'idle',
-      facing: index < positions.length ? positions[index].facing : 'right'
+      direction: "idle",
+      facing: index < positions.length ? positions[index].facing : "right",
     });
 
     return playerId;
@@ -95,7 +133,9 @@ class GameRoom {
     const player = this.players.get(playerId);
     if (player) {
       this.players.delete(playerId);
-      this.gameState.players = this.gameState.players.filter(p => p.id !== playerId);
+      this.gameState.players = this.gameState.players.filter(
+        (p) => p.id !== playerId,
+      );
     }
   }
 
@@ -105,7 +145,7 @@ class GameRoom {
 
   broadcastToAll(message) {
     const data = JSON.stringify(message);
-    this.players.forEach(player => {
+    this.players.forEach((player) => {
       if (player.ws && player.ws.readyState === WebSocket.OPEN) {
         player.ws.send(data);
       }
@@ -115,7 +155,11 @@ class GameRoom {
   broadcastToOthers(senderId, message) {
     const data = JSON.stringify(message);
     this.players.forEach((player, playerId) => {
-      if (playerId !== senderId && player.ws && player.ws.readyState === WebSocket.OPEN) {
+      if (
+        playerId !== senderId &&
+        player.ws &&
+        player.ws.readyState === WebSocket.OPEN
+      ) {
         player.ws.send(data);
       }
     });
@@ -126,7 +170,7 @@ class GameRoom {
   }
 
   getPlayerList() {
-    return Array.from(this.players.values()).map(p => p.name);
+    return Array.from(this.players.values()).map((p) => p.name);
   }
 
   canStart() {
@@ -134,13 +178,21 @@ class GameRoom {
     const elapsed = Date.now() - this.startTime;
 
     // Can start if 4 players OR (2+ players and 20 seconds passed)
-    return count >= PLAYER_LIMIT || (count >= MIN_PLAYERS && elapsed >= WAITING_TIME_BEFORE_COUNTDOWN);
+    return (
+      count >= PLAYER_LIMIT ||
+      (count >= MIN_PLAYERS && elapsed >= WAITING_TIME_BEFORE_COUNTDOWN)
+    );
   }
 
   startCountdown() {
     if (!this.isCountingDown) {
       this.isCountingDown = true;
       this.countdownStartTime = Date.now();
+
+      this.broadcastToAll({
+        type: "COUNTDOWN_STARTED",
+        countdownSeconds: COUNTDOWN_TIME / 1000,
+      });
     }
   }
 
@@ -152,18 +204,17 @@ class GameRoom {
 
   startGame() {
     this.gameState.gameStarted = true;
-    
+
     this.broadcastToAll({
-      type: 'GAME_STARTED',
-      players: this.gameState.players.map(p => ({
+      type: "GAME_STARTED",
+      players: this.gameState.players.map((p) => ({
         id: p.id,
         name: p.name,
         x: p.x,
         y: p.y,
-        lives: p.lives
+        lives: p.lives,
       })),
-      mapWidth: 13,
-      mapHeight: 13
+      map: this.gameState.map,
     });
   }
 
@@ -172,22 +223,22 @@ class GameRoom {
     const winner = this.getPlayer(winnerId);
 
     this.broadcastToAll({
-      type: 'GAME_ENDED',
+      type: "GAME_ENDED",
       winner: {
         id: winner.id,
-        name: winner.name
-      }
+        name: winner.name,
+      },
     });
   }
 }
 
 // WebSocket connection handler
-wss.on('connection', (ws) => {
-  console.log('Client connected');
+wss.on("connection", (ws) => {
+  console.log("Client connected");
   let currentPlayerId = null;
   let playerRoom = null;
 
-  ws.on('message', (message) => {
+  ws.on("message", (message) => {
     try {
       const data = JSON.parse(message);
       handleMessage(ws, data, (playerId, room) => {
@@ -195,15 +246,15 @@ wss.on('connection', (ws) => {
         playerRoom = room;
       });
     } catch (error) {
-      console.error('Error parsing message:', error);
+      console.error("Error parsing message:", error);
     }
   });
 
-  ws.on('close', () => {
-    console.log('Client disconnected');
+  ws.on("close", () => {
+    console.log("Client disconnected");
     if (currentPlayerId && playerRoom) {
       playerRoom.removePlayer(currentPlayerId);
-      
+
       if (playerRoom.getPlayerCount() === 0) {
         gameRooms.delete(playerRoom.id);
         if (currentGameRoom === playerRoom) {
@@ -211,16 +262,16 @@ wss.on('connection', (ws) => {
         }
       } else {
         playerRoom.broadcastToAll({
-          type: 'PLAYERS_UPDATE',
+          type: "PLAYERS_UPDATE",
           players: playerRoom.getPlayerList(),
-          playerCount: playerRoom.getPlayerCount()
+          playerCount: playerRoom.getPlayerCount(),
         });
       }
     }
   });
 
-  ws.on('error', (error) => {
-    console.error('WebSocket error:', error);
+  ws.on("error", (error) => {
+    console.error("WebSocket error:", error);
   });
 });
 
@@ -228,44 +279,40 @@ function handleMessage(ws, data, setPlayerInfo) {
   const { type } = data;
 
   switch (type) {
-    case 'JOIN_GAME':
+    case "JOIN_GAME":
       handleJoinGame(ws, data, setPlayerInfo);
       break;
 
-    case 'PLAYER_MOVE':
+    case "PLAYER_MOVE":
       handlePlayerMove(ws, data);
       break;
 
-    case 'PLACE_BOMB':
+    case "PLACE_BOMB":
       handlePlaceBomb(ws, data);
       break;
 
-    case 'BOMB_EXPLODED':
+    case "BOMB_EXPLODED":
       handleBombExplosion(ws, data);
       break;
 
-    case 'POWERUP_COLLECTED':
+    case "POWERUP_COLLECTED":
       handlePowerUpCollected(ws, data);
       break;
 
-    case 'PLAYER_DAMAGED':
+    case "PLAYER_DAMAGED":
       handlePlayerDamaged(ws, data);
       break;
 
-    case 'CHAT_MESSAGE':
+    case "CHAT_MESSAGE":
       handleChatMessage(ws, data);
       break;
 
-    case 'START_GAME':
-      handleStartGame(ws, data);
-      break;
-
-    case 'GAME_END':
+    case "GAME_END":
       handleGameEnd(ws, data);
       break;
 
     default:
-      console.warn('Unknown message type:', type);
+      console.warn("Unknown message type:", type);
   }
 }
 
@@ -277,28 +324,32 @@ function handleJoinGame(ws, data, setPlayerInfo) {
     const roomId = `room-${Date.now()}`;
     currentGameRoom = new GameRoom(roomId);
     gameRooms.set(roomId, currentGameRoom);
-    console.log('Created new game room:', roomId);
+    console.log("Created new game room:", roomId);
   }
 
   const playerId = currentGameRoom.addPlayer(ws, { playerName });
   setPlayerInfo(playerId, currentGameRoom);
 
   // Send join confirmation to player
-  ws.send(JSON.stringify({
-    type: 'PLAYER_JOINED',
-    playerId: playerId,
-    players: currentGameRoom.getPlayerList(),
-    playerCount: currentGameRoom.getPlayerCount()
-  }));
+  ws.send(
+    JSON.stringify({
+      type: "PLAYER_JOINED",
+      playerId: playerId,
+      players: currentGameRoom.getPlayerList(),
+      playerCount: currentGameRoom.getPlayerCount(),
+    }),
+  );
 
   // Broadcast player list update to all
   currentGameRoom.broadcastToAll({
-    type: 'PLAYERS_UPDATE',
+    type: "PLAYERS_UPDATE",
     players: currentGameRoom.getPlayerList(),
-    playerCount: currentGameRoom.getPlayerCount()
+    playerCount: currentGameRoom.getPlayerCount(),
   });
 
-  console.log(`Player ${playerId} (${playerName}) joined. Total: ${currentGameRoom.getPlayerCount()}`);
+  console.log(
+    `Player ${playerId} (${playerName}) joined. Total: ${currentGameRoom.getPlayerCount()}`,
+  );
 }
 
 function handlePlayerMove(ws, data) {
@@ -314,21 +365,23 @@ function handlePlayerMove(ws, data) {
     player.x = x;
     player.y = y;
     if (direction) player.direction = direction;
-    if (direction === 'left' || direction === 'right') player.facing = direction;
+    if (direction === "left" || direction === "right")
+      player.facing = direction;
 
     // Update game state
-    const playerState = room.gameState.players.find(p => p.id === playerId);
+    const playerState = room.gameState.players.find((p) => p.id === playerId);
     if (playerState) {
       playerState.x = x;
       playerState.y = y;
       if (direction) playerState.direction = direction;
-      if (direction === 'left' || direction === 'right') playerState.facing = direction;
+      if (direction === "left" || direction === "right")
+        playerState.facing = direction;
     }
 
     // Broadcast to all players
     room.broadcastToAll({
-      type: 'GAME_STATE_UPDATE',
-      players: room.gameState.players
+      type: "GAME_STATE_UPDATE",
+      players: room.gameState.players,
     });
   }
 }
@@ -349,15 +402,15 @@ function handlePlaceBomb(ws, data) {
     y: y,
     playerId: playerId,
     flameRange: room.getPlayer(playerId).flameRange,
-    createdAt: Date.now()
+    createdAt: Date.now(),
   });
 
   room.broadcastToAll({
-    type: 'BOMB_PLACED',
+    type: "BOMB_PLACED",
     bombId: bombId,
     x: x,
     y: y,
-    playerId: playerId
+    playerId: playerId,
   });
 }
 
@@ -365,13 +418,14 @@ function handleBombExplosion(ws, data) {
   const room = findRoomByWs(ws);
   if (!room) return;
 
-  const { bombId, x, y, affectedPlayers, destructedBlocks, explosionCells } = data;
+  const { bombId, x, y, affectedPlayers, destructedBlocks, explosionCells } =
+    data;
 
   // Remove bomb from game state
-  room.gameState.bombs = room.gameState.bombs.filter(b => b.id !== bombId);
+  room.gameState.bombs = room.gameState.bombs.filter((b) => b.id !== bombId);
 
   // Handle affected players
-  affectedPlayers.forEach(playerId => {
+  affectedPlayers.forEach((playerId) => {
     const player = room.getPlayer(playerId);
     if (player) {
       player.lives--;
@@ -379,7 +433,7 @@ function handleBombExplosion(ws, data) {
         player.isAlive = false;
       }
 
-      const playerState = room.gameState.players.find(p => p.id === playerId);
+      const playerState = room.gameState.players.find((p) => p.id === playerId);
       if (playerState) {
         playerState.lives = player.lives;
         playerState.isAlive = player.isAlive;
@@ -387,22 +441,38 @@ function handleBombExplosion(ws, data) {
     }
   });
 
-  // Handle destroyed blocks
-  destructedBlocks.forEach(block => {
+  // Handle destroyed blocks — update server map and broadcast to all clients
+  destructedBlocks.forEach((block) => {
+    // Update authoritative server map
+    const tile = room.gameState.map.tiles.find(
+      (t) => t.x === block.x && t.y === block.y,
+    );
+    if (tile && tile.type === "block") {
+      tile.type = "empty";
+    }
+
     // Random powerup spawn (30% chance)
     if (Math.random() < 0.3) {
-      const types = ['bombs', 'flames', 'speed'];
+      const types = ["bombs", "flames", "speed"];
       const type = types[Math.floor(Math.random() * types.length)];
       const powerupId = `powerup-${Date.now()}-${Math.random()}`;
-      
+
       room.gameState.powerups.push({
         id: powerupId,
         x: block.x,
         y: block.y,
-        type: type
+        type: type,
       });
     }
   });
+
+  // Broadcast destroyed blocks so all clients update their maps
+  if (destructedBlocks.length > 0) {
+    room.broadcastToAll({
+      type: "BLOCKS_DESTROYED",
+      blocks: destructedBlocks,
+    });
+  }
 
   // Create explosion entity
   const explosionId = `explosion-${Date.now()}`;
@@ -411,26 +481,28 @@ function handleBombExplosion(ws, data) {
     x: x,
     y: y,
     cells: explosionCells,
-    createdAt: Date.now()
+    createdAt: Date.now(),
   });
 
   // Remove explosion after 500ms
   setTimeout(() => {
-    room.gameState.explosions = room.gameState.explosions.filter(e => e.id !== explosionId);
+    room.gameState.explosions = room.gameState.explosions.filter(
+      (e) => e.id !== explosionId,
+    );
   }, 500);
 
   // Broadcast explosion to all
   room.broadcastToAll({
-    type: 'EXPLOSION',
+    type: "EXPLOSION",
     explosionId: explosionId,
     x: x,
     y: y,
     affectedPlayers: affectedPlayers,
-    explosionCells: explosionCells
+    explosionCells: explosionCells,
   });
 
   // Check if any players were eliminated
-  const alivePlayers = room.gameState.players.filter(p => p.isAlive);
+  const alivePlayers = room.gameState.players.filter((p) => p.isAlive);
   if (alivePlayers.length === 1) {
     room.endGame(alivePlayers[0].id);
   }
@@ -443,12 +515,14 @@ function handlePowerUpCollected(ws, data) {
   const { powerupId, playerId } = data;
 
   // Remove powerup
-  room.gameState.powerups = room.gameState.powerups.filter(p => p.id !== powerupId);
+  room.gameState.powerups = room.gameState.powerups.filter(
+    (p) => p.id !== powerupId,
+  );
 
   // Broadcast to all
   room.broadcastToAll({
-    type: 'GAME_STATE_UPDATE',
-    powerups: room.gameState.powerups
+    type: "GAME_STATE_UPDATE",
+    powerups: room.gameState.powerups,
   });
 }
 
@@ -457,15 +531,15 @@ function handlePlayerDamaged(ws, data) {
   if (!room) return;
 
   const { playerId, lives, isEliminated } = data;
-  const playerState = room.gameState.players.find(p => p.id === playerId);
-  
+  const playerState = room.gameState.players.find((p) => p.id === playerId);
+
   if (playerState) {
     playerState.lives = lives;
     playerState.isAlive = !isEliminated;
   }
 
   // Check if game should end
-  const alivePlayers = room.gameState.players.filter(p => p.isAlive);
+  const alivePlayers = room.gameState.players.filter((p) => p.isAlive);
   if (alivePlayers.length === 1) {
     room.endGame(alivePlayers[0].id);
   }
@@ -480,21 +554,12 @@ function handleChatMessage(ws, data) {
 
   if (player) {
     room.broadcastToAll({
-      type: 'CHAT_MESSAGE',
+      type: "CHAT_MESSAGE",
       playerId: playerId,
       playerName: player.name,
       message: data.message,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
-  }
-}
-
-function handleStartGame(ws, data) {
-  const room = findRoomByWs(ws);
-  if (!room) return;
-
-  if (room.getPlayerCount() >= MIN_PLAYERS) {
-    room.startGame();
   }
 }
 
@@ -537,15 +602,45 @@ setInterval(() => {
 
       if (room.shouldStartGame()) {
         room.startGame();
+        return; // Game just started, skip timer broadcast
+      }
+
+      // Broadcast lobby timer state to all clients
+      const count = room.getPlayerCount();
+      if (count > 0) {
+        let phase, remainingSeconds;
+
+        if (room.isCountingDown) {
+          phase = "countdown";
+          const elapsed = Date.now() - room.countdownStartTime;
+          remainingSeconds = Math.max(
+            0,
+            Math.ceil((COUNTDOWN_TIME - elapsed) / 1000),
+          );
+        } else {
+          phase = "waiting";
+          const elapsed = Date.now() - room.startTime;
+          remainingSeconds = Math.max(
+            0,
+            Math.ceil((WAITING_TIME_BEFORE_COUNTDOWN - elapsed) / 1000),
+          );
+        }
+
+        room.broadcastToAll({
+          type: "LOBBY_TIMER_UPDATE",
+          phase: phase,
+          remainingSeconds: remainingSeconds,
+          playerCount: count,
+        });
       }
     } else if (!room.gameState.gameEnded) {
       // Send periodic state updates during game
       room.broadcastToAll({
-        type: 'GAME_STATE_UPDATE',
+        type: "GAME_STATE_UPDATE",
         players: room.gameState.players,
         bombs: room.gameState.bombs,
         explosions: room.gameState.explosions,
-        powerups: room.gameState.powerups
+        powerups: room.gameState.powerups,
       });
     }
   });
