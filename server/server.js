@@ -316,8 +316,13 @@ function handleMessage(ws, data, setPlayerInfo) {
 function handleJoinGame(ws, data, setPlayerInfo) {
   const { playerName } = data;
 
-  // Create new game room if none exists or current is full
-  if (!currentGameRoom || currentGameRoom.getPlayerCount() >= PLAYER_LIMIT) {
+  // Create new game room if none exists, current is full, or current game already started/ended
+  if (
+    !currentGameRoom ||
+    currentGameRoom.getPlayerCount() >= PLAYER_LIMIT ||
+    currentGameRoom.gameState.gameStarted ||
+    currentGameRoom.gameState.gameEnded
+  ) {
     const roomId = `room-${Date.now()}`;
     currentGameRoom = new GameRoom(roomId);
     gameRooms.set(roomId, currentGameRoom);
