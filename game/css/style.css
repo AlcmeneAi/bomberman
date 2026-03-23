@@ -167,10 +167,9 @@ body {
 .game-board {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(13, 40px);
-  grid-template-rows: repeat(13, 40px);
+  grid-template-columns: repeat(15, 40px);
+  grid-template-rows: repeat(15, 40px);
   gap: 0;
-  border: 2px solid #fff;
   background: #333;
 }
 
@@ -178,7 +177,7 @@ body {
   position: relative;
   width: 40px;
   height: 40px;
-  background-image: url("../sprites/tile.png");
+  background-image: url("../sprites/tile2.png");
   background-size: cover;
   background-repeat: no-repeat;
   image-rendering: pixelated;
@@ -187,12 +186,14 @@ body {
 }
 
 .tile.empty {
-  background-image: url("../sprites/tile.png");
+  background-image: url("../sprites/tile2.png");
   background-color: #444;
+  
+
 }
 
 .tile.wall {
-  background-image: url("../sprites/brick.png");
+  background-image: url("../sprites/brick2.png");
   background-color: #2a2a2a;
 }
 
@@ -201,11 +202,37 @@ body {
 }
 
 .tile.block {
-  background-image: url("../sprites/smashable_brick.png");
+  background-image: url("../sprites/smashable_brick2.png");
   background-color: #8b4513;
 }
 
 .tile.block::after {
+  display: none;
+}
+
+.tile.wall_h {
+  background-image: url("../sprites/cake_wall_one2.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-color: transparent;
+  image-rendering: pixelated;
+  border: none;
+}
+
+.tile.wall_h::after {
+  display: none;
+}
+
+.tile.wall_v {
+  background-image: url("../sprites/side_cake_wall2.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-color: transparent;
+  image-rendering: pixelated;
+  border: none;
+}
+
+.tile.wall_v::after {
   display: none;
 }
 

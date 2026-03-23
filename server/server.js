@@ -21,38 +21,47 @@ const PLAYER_LIMIT = 4;
 const MIN_PLAYERS = 2;
 const WAITING_TIME_BEFORE_COUNTDOWN = 20000; // 20 seconds
 const COUNTDOWN_TIME = 10000; // 10 seconds
-const MAP_WIDTH = 13;
-const MAP_HEIGHT = 13;
+const MAP_WIDTH = 15;
+const MAP_HEIGHT = 15;
+const INNER_W = 13;
+const INNER_H = 13;
 
 /**
  * Generate the game map on the server so all players share the same layout.
- * Replicates the same algorithm as the client-side GameMap.initializeTiles().
+ * Outer ring: wall_h (top/bottom) and wall_v (left/right sides).
+ * Inner 13x13 playfield is offset by 1.
  */
 function generateMap(width = MAP_WIDTH, height = MAP_HEIGHT) {
   const tiles = [];
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      // Indestructible walls at odd×odd positions
-      if (x % 2 === 1 && y % 2 === 1) {
-        tiles.push({ x, y, type: "wall" });
+      // Top and bottom border rows → horizontal wall
+      if (y === 0 || y === height - 1) {
+        tiles.push({ x, y, type: "wall_h" });
       }
-      // Safe zones: 2×2 empty area in each corner (spawn points)
-      else if (
-        (x <= 1 && y <= 1) ||
-        (x >= width - 2 && y <= 1) ||
-        (x <= 1 && y >= height - 2) ||
-        (x >= width - 2 && y >= height - 2)
-      ) {
-        tiles.push({ x, y, type: "empty" });
+      // Left and right border columns → vertical wall
+      else if (x === 0 || x === width - 1) {
+        tiles.push({ x, y, type: "wall_v" });
       }
-      // Random destructible blocks (65% chance)
-      else if (Math.random() < 0.65) {
-        tiles.push({ x, y, type: "block" });
-      }
-      // Empty space
+      // Inner 13x13 playfield (shifted by 1)
       else {
-        tiles.push({ x, y, type: "empty" });
+        const ix = x - 1;
+        const iy = y - 1;
+        if (ix % 2 === 1 && iy % 2 === 1) {
+          tiles.push({ x, y, type: "wall" });
+        } else if (
+          (ix <= 1 && iy <= 1) ||
+          (ix >= INNER_W - 2 && iy <= 1) ||
+          (ix <= 1 && iy >= INNER_H - 2) ||
+          (ix >= INNER_W - 2 && iy >= INNER_H - 2)
+        ) {
+          tiles.push({ x, y, type: "empty" });
+        } else if (Math.random() < 0.65) {
+          tiles.push({ x, y, type: "block" });
+        } else {
+          tiles.push({ x, y, type: "empty" });
+        }
       }
     }
   }
@@ -96,13 +105,13 @@ class GameRoom {
       ws: ws,
     };
 
-    // Set starting position based on player index
+    // Set starting position based on player index (offset by 1 for border)
     const index = this.players.size;
     const positions = [
-      { x: 0, y: 0, direction: "idle", facing: "right" }, // Top-left     → faces right
-      { x: 12, y: 0, direction: "idle", facing: "left" }, // Top-right    → faces left
-      { x: 0, y: 12, direction: "idle", facing: "right" }, // Bottom-left  → faces right
-      { x: 12, y: 12, direction: "idle", facing: "left" }, // Bottom-right → faces left
+      { x: 1, y: 1, direction: "idle", facing: "right" },   // Top-left
+      { x: 13, y: 1, direction: "idle", facing: "left" },   // Top-right
+      { x: 1, y: 13, direction: "idle", facing: "right" },  // Bottom-left
+      { x: 13, y: 13, direction: "idle", facing: "left" },  // Bottom-right
     ];
 
     if (index < positions.length) {

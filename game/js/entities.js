@@ -151,7 +151,7 @@ export class Explosion {
 }
 
 export class GameMap {
-  constructor(width = 13, height = 13) {
+  constructor(width = 15, height = 15) {
     this.width = width;
     this.height = height;
     this.tiles = this.initializeTiles();
@@ -170,45 +170,37 @@ export class GameMap {
 
   initializeTiles() {
     const tiles = [];
+    const innerW = this.width - 2;
+    const innerH = this.height - 2;
 
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
-        // Create walls at even positions (classic Bomberman pattern)
-        if (x % 2 === 1 && y % 2 === 1) {
-          tiles.push({
-            x,
-            y,
-            type: "wall", // Indestructible
-          });
+        // Top and bottom border rows → horizontal wall
+        if (y === 0 || y === this.height - 1) {
+          tiles.push({ x, y, type: "wall_h" });
         }
-        // Create safe zones in corners (no blocks)
-        else if (
-          (x <= 1 && y <= 1) ||
-          (x >= this.width - 2 && y <= 1) ||
-          (x <= 1 && y >= this.height - 2) ||
-          (x >= this.width - 2 && y >= this.height - 2)
-        ) {
-          tiles.push({
-            x,
-            y,
-            type: "empty",
-          });
+        // Left and right border columns → vertical wall
+        else if (x === 0 || x === this.width - 1) {
+          tiles.push({ x, y, type: "wall_v" });
         }
-        // Randomly place destructible blocks
-        else if (Math.random() < 0.65) {
-          tiles.push({
-            x,
-            y,
-            type: "block", // Destructible
-          });
-        }
-        // Empty space
+        // Inner playfield (shifted by 1)
         else {
-          tiles.push({
-            x,
-            y,
-            type: "empty",
-          });
+          const ix = x - 1;
+          const iy = y - 1;
+          if (ix % 2 === 1 && iy % 2 === 1) {
+            tiles.push({ x, y, type: "wall" });
+          } else if (
+            (ix <= 1 && iy <= 1) ||
+            (ix >= innerW - 2 && iy <= 1) ||
+            (ix <= 1 && iy >= innerH - 2) ||
+            (ix >= innerW - 2 && iy >= innerH - 2)
+          ) {
+            tiles.push({ x, y, type: "empty" });
+          } else if (Math.random() < 0.65) {
+            tiles.push({ x, y, type: "block" });
+          } else {
+            tiles.push({ x, y, type: "empty" });
+          }
         }
       }
     }
@@ -232,6 +224,7 @@ export class GameMap {
       return false;
     }
     const tile = this.getTile(x, y);
+    // wall, wall_h, wall_v, and block are all non-walkable
     return tile && tile.type === "empty";
   }
 
@@ -254,7 +247,7 @@ export class GameMap {
 }
 
 export class GameState {
-  constructor(mapWidth = 13, mapHeight = 13, mapData = null) {
+  constructor(mapWidth = 15, mapHeight = 15, mapData = null) {
     this.map = mapData
       ? GameMap.fromServer(mapData)
       : new GameMap(mapWidth, mapHeight);
