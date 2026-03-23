@@ -344,6 +344,11 @@ function handleJoinGame(ws, data, setPlayerInfo) {
   const playerId = currentGameRoom.addPlayer(ws, { playerName });
   setPlayerInfo(playerId, currentGameRoom);
 
+  // Start the 20s timer only when the minimum players (2) have joined
+  if (currentGameRoom.getPlayerCount() === MIN_PLAYERS) {
+    currentGameRoom.startTime = Date.now();
+  }
+
   // Send join confirmation to player
   ws.send(
     JSON.stringify({
